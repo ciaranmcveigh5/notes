@@ -1,0 +1,130 @@
+import groovy.json.JsonOutput
+
+def buildIfChanged(app) {
+
+  modulePath = "containers/${app}"
+  sh """git ls-tree HEAD ${modulePath} --abbrev=7 | awk '{print \$3}' > /tmp/${app}hash"""
+  treeHash = readFile "/tmp/${app}hash"
+
+  if (treeHash == "") {
+    treeHash = "latest"
+  }
+
+  sh "sh containers/hashValid.sh ${app} ${treeHash}"
+  hashExists = readFile "/tmp/hashValid${app}"
+  def intHashExists = hashExists.toInteger()
+
+  if (intHashExists > 0) {
+    stage('DockerBuild') {
+      echo "💪  Building"
+      build job: 'Docker_Build_Image', parameters: [
+        string(name: 'ENVIRONMENT', value: "${ENVIRONMENT}"),
+        string(name: 'APPLICATION', value: "${app}"),
+        string(name: 'HASH', value: "${treeHash}")
+      ]
+    }
+    stage('DockerImageTests') {
+      echo "Running image tests"
+    }
+
+  } else {
+    echo "🎉  No changes in - skipping build"
+  }
+
+}
+
+def terraformBuild(apps) {
+
+  def treeHash = [:]
+
+  apps.each {
+    modulePath = "containers/${it}"
+    sh """git ls-tree HEAD ${modulePath} --abbrev=7 | awk '{print \$3}' > /tmp/${it}hash"""
+    treeHash["${it}"] = readFile "/tmp/${it}hash"
+    treeHash["${it}"] = treeHash["${it}"].trim()
+  }
+
+  treeHash = JsonOutput.toJson(treeHash)
+  treeHash = treeHash.replace(":", "=")
+
+  stage('TerraformBuild') {
+    build job: 'Terraform_Build', parameters: [
+      string(name: 'ENVIRONMENT', value: "${ENVIRONMENT}"),
+      string(name: "APPLICATION", value: "ecs"),
+      string(name: "HASH", value: "${treeHash}")
+    ]
+  }
+
+  stage('IntegrationTests') {
+    build job: 'Integration_Tests'
+  }
+}
+
+def getGitHash(path) {
+  sh """git ls-tree HEAD ${path} --abbrev=7 | awk '{print \$3}' > /tmp/new-${path}"""
+  treeHash = readFile """/tmp/new-${path}"""
+
+  if (treeHash == "") {
+    treeHash = "latest"
+  }
+
+  return treeHash
+}
+
+def hasGitHashChanged(hash, path) {
+  sh "touch /tmp/${path}"
+  previousHash = readFile "/tmp/${path}"
+
+  if (hash != previousHash) {
+    writeFile file: """/tmp/${path}""", text: hash
+    return true
+  } else {
+    return false
+  }
+}
+
+def deployStaticWebsite() {
+  build job: 'Docker_Build_Asset', parameters: [
+    string(name: 'ENVIRONMENT', value: "baqa")
+  ]
+}
+
+def runTests() {
+    build job: 'Docker_Tests', parameters: [
+        [$class: 'StringParameterValue', name: 'BRANCH', value: 'master']
+    ]
+}
+
+node {
+  stage('Git Clone') {
+    git credentialsId: 'bc4cdd02-8691-46c4-bb93-20278a920677', url: 'git@bitbucket.org:project/project.git'
+  }
+
+  // CONTAINER DEPLOYMENT
+
+  // def containers = ["api-gateway", "simple-backend"]
+  // containers.each {
+  //   buildIfChanged("${it}")
+  // }
+  //
+  // terraformBuild(["api-gateway", "simple-backend"])
+
+
+  // UNIT AND UI TESTS
+  stage('Unit Tests') {
+    runTests()
+  }
+
+  // STATIC FRONTEND DEPLOYMENT
+
+  stage('Static Web Deploy') {
+    frontendHash = getGitHash("webfrontend")
+    changed = hasGitHashChanged(frontendHash, "webfrontend")
+
+    if (changed) {
+      deployStaticWebsite()
+    }
+  }
+
+
+}

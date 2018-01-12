@@ -1,0 +1,57 @@
+[
+    {
+        "name": "jenkins",
+        "image": "123.dkr.ecr.eu-west-2.amazonaws.com/project/static/jenkins:latest",
+        "user": "root",
+        "cpu": 500,
+        "memory": 2048,
+        "links": [],
+        "portMappings": [
+            {
+              "containerPort": 8080,
+              "hostPort": 0,
+              "protocol": "tcp"
+            },
+            {
+              "containerPort": 5000,
+              "hostPort": 0,
+              "protocol": "tcp"
+            }
+        ],
+        "essential": true,
+        "entryPoint": [],
+        "command": [],
+        "volumesFrom": [
+          {
+            "sourceContainer": "jenkins-data"
+          }
+        ],
+        "environment": [
+          {
+            "name": "JAVA_OPTS",
+            "value": "-Dhudson.Main.development=true -Djenkins.install.runSetupWizard=false"
+          },
+          {
+            "name": "TESTPIN0",
+            "value": "project"
+          }
+        ],
+        "mountPoints": [
+          {
+            "sourceVolume": "dockerbin",
+            "containerPath": "/usr/bin/docker"
+          },
+          {
+            "sourceVolume": "dockersock",
+            "containerPath": "/var/run/docker.sock"
+          }
+        ]
+    },
+    {
+      "name": "jenkins-data",
+      "image": "123.dkr.ecr.eu-west-2.amazonaws.com/project/static/jenkins-data:latest",
+      "cpu": 100,
+      "memory": 100,
+      "essential": false
+    }
+]

@@ -1,0 +1,32 @@
+node {
+
+  stage("Clean Workspace") {
+    sh """docker rm \$(docker ps -q -f status=exited) || true"""
+    sh """docker rmi \$(docker images --filter "dangling=true" -q --no-trunc) || true"""
+  }
+
+  stage('AWS Login') {
+     sh """aws ecr get-login --region eu-west-2 > login.txt"""
+     sh """cut -d' ' -f1-6,9- login.txt | sh"""
+  }
+
+  stage("Git Clone") {
+    git credentialsId: 'bc4cdd02-8691-46c4-bb93-20278a920677', url: 'git@bitbucket.org:project/project.git'
+  }
+
+
+  dir("webfrontend") {
+    stage('Unit Test Setup') {
+      docker.build("node-frontend")
+    }
+  }
+
+  stage("Empty S3") {
+    sh "aws s3 rm s3://web.${ENVIRONMENT}.project.co.uk --recursive"
+  }
+
+  stage("Build & Deploy") {
+    sh "docker run node-frontend /bin/bash -c 'npm run build && aws s3 cp /usr/src/app/build s3://web.${ENVIRONMENT}.project.co.uk --recursive'"
+  }
+
+}

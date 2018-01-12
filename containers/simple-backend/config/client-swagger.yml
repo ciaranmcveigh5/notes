@@ -1,0 +1,129 @@
+swagger: "2.0"
+info:
+  description: ""
+  version: "1.0.0"
+  title: "Client Interface Specification"
+host: "spike.project.com"
+basePath: "/v1"
+schemes:
+- "http"
+paths:
+  /user/{userId}/balance:
+    get:
+      summary: "Get a users account balance"
+      operationId: getBalance
+      produces:
+        - application/json
+      parameters:
+      - name: "userId"
+        in: "path"
+        description: "ID of user that wants balance"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful balance request"
+          schema:
+            $ref: "#/definitions/BalanceResponse"
+          examples:
+            application/json: |-
+              {
+                "balance": "2400.00",
+                "currency": "GBP"
+              }
+  /user/{userId}/address:
+    get:
+      summary: "Edit user address"
+      operationId: getAddress
+      produces:
+        - application/json
+      parameters:
+      - name: "userId"
+        in: "path"
+        description: "ID of user that wants to get address"
+        required: true
+        type: "string"
+      responses:
+        405:
+          description: "Invalid input"
+        200:
+          description: "Retrieved succesfully"
+          schema:
+            $ref: "#/definitions/AddressResponse"
+          examples:
+            application/json: |-
+              {
+                "id": "1",
+                "addressLine1": "53 Digby Crescent",
+                "addressLine2": "Finsbury Park",
+                "city": "London",
+                "postCode": "N42HS"
+              }
+    put:
+      summary: "Edit user address"
+      parameters:
+      - name: "userId"
+        in: "path"
+        description: "ID of user that wants to update address"
+        required: true
+        type: "string"
+      - in: "body"
+        name: "body"
+        description: "Updated address details"
+        required: true
+        schema:
+          $ref: "#/definitions/AddressUpdate"
+      responses:
+        405:
+          description: "Invalid input"
+        204:
+          description: "Edited succesfully"
+definitions:
+  BalanceResponse:
+    type: "object"
+    required:
+      - balance
+      - currency
+    properties:
+      balance:
+        type: "string"
+      currency:
+        type: "string"
+        description: "[ISO 4217](http://en.wikipedia.org/wiki/ISO_4217) currency code."
+    example:
+      balance: "2400.00"
+      currency: "GBP"
+  AddressResponse:
+    type: "object"
+    properties:
+      id:
+        type: string
+      addressLine1:
+        type: "string"
+      addressLine2:
+        type: "string"
+      city:
+        type: "string"
+      postCode:
+        type: "string"
+    example:
+      addressLine1: "53 Digby Crescent"
+      addressLine2: "Finsbury Park"
+      city: "London"
+      postCode: "N42HS"
+  AddressUpdate:
+    type: "object"
+    properties:
+      addressLine1:
+        type: "string"
+      addressLine2:
+        type: "string"
+      city:
+        type: "string"
+      postCode:
+        type: "string"
+    example:
+      addressLine1: "53 Digby Crescent"
+      addressLine2: "Finsbury Park"
+      city: "London"
+      postCode: "N42HS"

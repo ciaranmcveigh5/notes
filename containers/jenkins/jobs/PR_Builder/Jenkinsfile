@@ -1,0 +1,21 @@
+node {
+  properties([
+  pipelineTriggers([
+   [$class: 'GenericTrigger',
+    genericVariables: [
+     [expressionType: 'JSONPath', key: 'branch', value: '$.pullrequest.source.branch.name']
+    ],
+    regexpFilterText: '',
+    regexpFilterExpression: ''
+   ]
+  ])
+ ])
+
+ stage("Run Tests") {
+   build job: 'Docker_Tests', parameters: [
+       [$class: 'StringParameterValue', name: 'BRANCH', value: "$branch"]
+   ]
+ }
+}
+
+// test pr builder

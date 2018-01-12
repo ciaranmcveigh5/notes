@@ -1,0 +1,19 @@
+FROM debian:jessie
+
+
+RUN useradd -d "/var/jenkins_home" -u 1000 -m -s /bin/bash jenkins
+RUN mkdir -p /var/log/jenkins
+RUN chown -R jenkins:jenkins /var/log/jenkins
+
+# Copy Content
+
+COPY jobs/ /var/jenkins_home/jobs/
+COPY misc/credentials.xml /var/jenkins_home/credentials.xml
+COPY misc/config.xml /var/jenkins_home/config.xml
+COPY misc/jenkins.CLI.xml /var/jenkins_home/jenkins.CLI.xml
+
+VOLUME ["/var/jenkins_home"]
+
+USER jenkins
+
+CMD ["echo", "Data container for Jenkins"]
